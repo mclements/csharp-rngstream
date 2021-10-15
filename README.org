@@ -1,0 +1,150 @@
+#+title: Rngstream random number generators for C#
+#+author: Mark Clements
+
+#+BEGIN_SRC elisp :exports none
+;;; ob-csharp.el --- org-babel functions for csharp evaluation
+
+;; Copyright (C) 2011-2015 Free Software Foundation, Inc.
+
+;; Original Author: Eric Schulte (ob-java.el) 
+;; Author: thomas "at" friendlyvillagers.com 
+;; Keywords: literate programming, reproducible research
+;; Homepage: http://orgmode.org
+
+;; This file is NOT YET part of GNU Emacs.
+
+;; GNU Emacs is free software: you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
+
+;; GNU Emacs is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+
+;; You should have received a copy of the GNU General Public License
+;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
+
+;;; Commentary:
+
+;; Currently this only supports the external compilation and execution
+;; of csharp code blocks (i.e., no session support).
+
+;; Local changes: default to "mcs"; add :otherfiles argument for compiling
+;; Mark Clements 2021-10-15
+
+;;; Code:
+(require 'ob)
+
+(defvar org-babel-tangle-lang-exts)
+(add-to-list 'org-babel-tangle-lang-exts '("csharp" . "cs"))
+
+(defcustom org-babel-csharp-command "mono"
+  "Name of the csharp command.
+May be either a command in the path, like mono
+or an absolute path name, like /usr/local/bin/mono
+parameters may be used, like mono -verbose"
+  :group 'org-babel
+  :version "24.3"
+  :type 'string)
+
+(defcustom org-babel-csharp-compiler "mcs"
+  "Name of the csharp compiler.
+May be either a command in the path, like mcs
+or an absolute path name, like /usr/local/bin/mcs
+parameters may be used, like mcs -warnaserror+"
+  :group 'org-babel
+  :version "24.3"
+  :type 'string) 
+
+(defun org-babel-execute:csharp (body params)
+  (let* ((full-body (org-babel-expand-body:generic body params))
+         (cmpflag (or (cdr (assoc :cmpflag params)) ""))
+         (cmdline (or (cdr (assoc :cmdline params)) ""))
+         (otherfiles (or (cdr (assoc :otherfiles params)) ""))
+         (src-file (org-babel-temp-file "csharp-src-" ".cs"))
+         (exe-file (concat (file-name-sans-extension src-file)  ".exe"))
+         (compile 
+          (progn (with-temp-file  src-file (insert full-body))
+                 (org-babel-eval 
+                  (concat org-babel-csharp-compiler " " cmpflag " "  src-file " " otherfiles) ""))))
+    (let ((results (org-babel-eval (concat org-babel-csharp-command " " cmdline " " exe-file) "")))
+      (org-babel-reassemble-table
+       (org-babel-result-cond (cdr (assoc :result-params params))
+         (org-babel-read results)
+         (let ((tmp-file (org-babel-temp-file "c-")))
+           (with-temp-file tmp-file (insert results))
+           (org-babel-import-elisp-from-file tmp-file)))
+       (org-babel-pick-name
+        (cdr (assoc :colname-names params)) (cdr (assoc :colnames params)))
+       (org-babel-pick-name
+        (cdr (assoc :rowname-names params)) (cdr (assoc :rownames params)))))))
+
+(defun org-babel-prep-session:csharp (session params)
+  "Return an error because csharp does not support sessions."
+  (error "Sessions are not (yet) supported for CSharp"))
+
+(provide 'ob-csharp)
+;;; ob-csharp.el ends here
+#+END_SRC
+
+
+#+BEGIN_SRC csharp :results verbatim :otherfiles rngstream.cs :exports both 
+  using System;
+  class HelloWorld {
+      public static void Main()
+      {
+	  RngStream rng = new RngStream();
+	  Console.WriteLine(rng.randU01());
+	  Console.WriteLine(rng.randU01());
+
+	  rng.resetStartStream();
+	  Console.WriteLine(rng.randU01());
+	  Console.WriteLine(rng.randU01());
+
+	  rng.resetStartSubstream();
+	  Console.WriteLine(rng.randU01());
+	  Console.WriteLine(rng.randU01());
+
+	  rng.resetNextSubstream();
+	  Console.WriteLine(rng.randU01());
+	  Console.WriteLine(rng.randU01());
+
+	  rng.resetNextStream();
+	  Console.WriteLine(rng.randU01());
+	  Console.WriteLine(rng.randU01());
+      }
+  }
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+0.127011122046577
+0.318527565396794
+0.127011122046577
+0.318527565396794
+0.127011122046577
+0.318527565396794
+0.0793989897973346
+0.480339504757574
+0.75958186224872
+0.978310573261371
+#+end_example
+
+#+BEGIN_SRC R :session *R* :results output :exports both
+  library(parallel)
+  invisible(runif(1))
+  RNGkind("L'Ecuyer-CMRG")
+  .Random.seed <- Ig <- Bg <- c(10407L, 12345L, 12345L, 12345L, 12345L, 12345L, 12345L)
+  print(runif(2))
+  .Random.seed <- Bg <- nextRNGSubStream(Bg)
+  print(runif(2))
+  .Random.seed <- Ig <- Bg <- nextRNGStream(Ig)
+  print(runif(2))
+#+END_SRC
+
+#+RESULTS:
+: [1] 0.1270111 0.3185276
+: [1] 0.07939899 0.48033950
+: [1] 0.7595819 0.9783106
