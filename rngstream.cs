@@ -319,6 +319,7 @@ public class RngStream : Random
     /// <summary>
     ///   Constructor which also specifies the stream name
     /// </summary>
+    /// <param name="name">The name of the stream</param>
     public RngStream (string name) : this()
     {
 	descriptor = name;
@@ -327,6 +328,8 @@ public class RngStream : Random
     /// <summary>
     /// Initialise the seed as per R's set.seed() with RNGkind("L'Ecuyer-CMRG")
     /// </summary>
+    /// <exception cref="ArgumentException">If seed is less than zero</exception>
+    /// <param name="inseed">The seed as an integer</param>
     public RngStream (Int32 inseed) : this()
     {
 	if (inseed < 0)
@@ -345,6 +348,7 @@ public class RngStream : Random
     /// <summary>
     ///   Set the package seed
     /// </summary>
+    /// <param name="seed">The seed as an array</param>
     public static void SetPackageSeed (uint[] seed)
     {
         CheckSeed(seed);
@@ -398,7 +402,8 @@ public class RngStream : Random
     
     /// <summary>
     ///   Set the anti variable for antithetic sampling.
-    /// </summary> 
+    /// </summary>
+    /// <param name="a">Value for anti</param>
     public void SetAntithetic (bool a)
     {
 	anti = a;
@@ -407,6 +412,7 @@ public class RngStream : Random
     /// <summary>
     ///   Set the pec53 variable for increased precision.
     /// </summary> 
+    /// <param name="incp">Value for prec53</param>
     public void IncreasedPrecis (bool incp)
     {
 	prec53 = incp;
@@ -420,6 +426,10 @@ public class RngStream : Random
     /// if e = 0, let n = c.
     /// Jump n steps forward if n > 0, backwards if n < 0.
     /// </summary>
+    /// <param name="e">Calculate for 2^e</param>
+    /// <param name="c">Calculate for c</param>
+    /// <param name="C1">Output first 3x3 matrix</param>
+    /// <param name="C2">Output second 3x3 matrix</param>
     public void CalcMatrix (int e, int c, double[,] C1, double[,] C2)
     {
 	double[,] B1 = new double[3,3], B2 = new double[3,3];
@@ -458,6 +468,14 @@ public class RngStream : Random
     /// if e = 0, let n = c.
     /// Jump n steps forward if n > 0, backwards if n < 0.
     /// </summary>
+    /// <param name="e">Calculate for 2^e</param>
+    /// <param name="c">Calculate for c</param>
+    /// <param name="A1">First positive transition matrix</param>
+    /// <param name="A2">Second positive transition matrix</param>
+    /// <param name="InvA1">First negative transition matrix</param>
+    /// <param name="InvA2">Second negative transition matrix</param>
+    /// <param name="CgIn">Input seed array</param>
+    /// <param name="CgOut">Output seed array</param>
     public void GenAdvance (int e, int c,
 			    double[,] A1, double[,] A2,
 			    double[,] InvA1, double[,] InvA2,
@@ -502,6 +520,12 @@ public class RngStream : Random
     /// <summary>
     ///   Advance the current seed using GenAdvance().
     /// </summary> 
+    /// <param name="e">Calculate for 2^e</param>
+    /// <param name="c">Calculate for c</param>
+    /// <param name="A1">First positive transition matrix</param>
+    /// <param name="A2">Second positive transition matrix</param>
+    /// <param name="InvA1">First negative transition matrix</param>
+    /// <param name="InvA2">Second negative transition matrix</param>
     public void GenAdvanceState (int e, int c,
 				 double[,] A1, double[,] A2,
 				 double[,] InvA1, double[,] InvA2)
@@ -512,14 +536,18 @@ public class RngStream : Random
     /// <summary>
     ///   Advance the current seed using single step transition matrices.
     /// </summary>
+    /// <param name="e">Calculate for 2^e</param>
+    /// <param name="c">Calculate for c</param>
     public void AdvanceState (int e, int c)
     {
 	GenAdvanceState(e, c, A1p0, A2p0, InvA1p0, InvA2p0);
     } 
 
     /// <summary>
-    ///   Advacne the current seed using sub-stream steps
+    ///   Advance the current seed using sub-stream steps
     /// </summary>
+    /// <param name="e">Calculate for 2^e</param>
+    /// <param name="c">Calculate for c</param>
     public void AdvanceSubstream (int e, int c)
     {
 	GenAdvanceState(e, c, A1p76, A2p76, InvA1p76, InvA2p76);
@@ -530,6 +558,8 @@ public class RngStream : Random
     /// <summary>
     ///   Advance the current seed using stream steps.
     /// </summary>
+    /// <param name="e">Calculate for 2^e</param>
+    /// <param name="c">Calculate for c</param>
     public void AdvanceStream (int e, int c)
     {
 	GenAdvanceState(e, c, A1p127, A2p127, InvA1p127, InvA2p127);
@@ -540,6 +570,8 @@ public class RngStream : Random
     /// <summary>
     ///   Check a seed value.
     /// </summary>
+    /// <param name="seed">Input seed as an array</param>
+    /// <exception cref="ArgumentException">If seed is invalid</exception>
     private static void CheckSeed (uint[] seed)
     {
 	/* Check that the seeds are legitimate values */
@@ -562,6 +594,7 @@ public class RngStream : Random
 
     /// <summary>
     ///   Set all of the seeds.
+    /// <param name="seed">Seed as an array</param>
     /// </summary>
     public void SetSeed (uint[] seed)
     {
@@ -636,6 +669,8 @@ public class RngStream : Random
     /// <summary>
     ///   Override the Next(int,int) method
     /// </summary>
+    /// <param name="min">Lower integer value</param>
+    /// <param name="max">Upper integer value</param>
     public override int Next(int min, int max)
     {
 	if (min > max)
@@ -646,6 +681,7 @@ public class RngStream : Random
     /// <summary>
     ///   Override the NextBytes(byte[]) method
     /// </summary>
+    /// <param name="buffer">Output array</param>
     public override void NextBytes(byte[] buffer)
     {
 	for (int i = 0, length = buffer.Length; i < length; i++)
