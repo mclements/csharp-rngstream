@@ -6,7 +6,7 @@
  * Notice:         This code can be used freely for personal, academic,
  *                 or non-commercial purposes. For commercial purposes, 
  *                 please contact P. L'Ecuyer at: lecuyer@iro.UMontreal.ca
- * Version         1.1
+ * Version         1.2
  * Date:           26 July 2011
 
  * Correction:     added a test 
@@ -26,11 +26,11 @@
  *
 
  Adapted for C# by Mark Clements 2021-10-14
- - Extended to include calcMatrix, genAdvanceState, advanceStream, advanceSubstream
+ - Extended to include calcMatrix, genAdvance, advanceStream, advanceSubstream
  - Renamed InvA? to InvA?p0
  - Included InvA?p76 and InvA?p127
  - seeds are passed in as uint[] (cf long[] in Java) - but handled internally as double[]
-
+ - Inherits from System.Random
 */
 
 using System;

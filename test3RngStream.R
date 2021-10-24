@@ -1,0 +1,5 @@
+unsigned = \(seed) ifelse(seed < 0, seed + 2^32, seed)
+RNGkind("L'Ecuyer-CMRG")
+set.seed(12345)
+print(unsigned(.Random.seed))
+runif(1)
