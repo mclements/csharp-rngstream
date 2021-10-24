@@ -18,6 +18,11 @@ test3: test3RngStream.cs RngStream.cs
 	$(MONO) test3RngStream.exe
 	R -q -f test3RngStream.R
 
+test3dotnet:
+	dotnet clean
+	dotnet build /p:StartupObject=test3RngStream
+	dotnet run
+
 test2dotnet:
 	dotnet clean
 	dotnet build /p:StartupObject=test2RngStream
@@ -29,6 +34,8 @@ testdotnet:
 	dotnet run
 
 clean:
+	rm -fr bin
+	rm -fr obj
 	rm -f test.res
 	rm -f testRngStream.exe
 	rm -f test2RngStream.exe
