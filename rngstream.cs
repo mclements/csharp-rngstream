@@ -35,8 +35,8 @@
 
 using System;
 
-public class RngStream : Random {
-
+public class RngStream : Random
+{
     // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     // Private constants.
 
@@ -116,39 +116,52 @@ public class RngStream : Random {
     // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     // Private variables (fields) for each stream.
 
+    /// <summary>
+    ///   Default seed of the package and seed for the next stream to be created.
+    /// </summary>
     private static double[] nextSeed = {12345, 12345, 12345, 12345, 12345, 12345};
-    // Default seed of the package and seed for the next stream to be created.
 
+    /// <summary>
+    /// The arrays {\tt Cg}, {\tt Bg}, and {\tt Ig} contain the current state, 
+    /// the starting point of the current substream,
+    /// and the starting point of the stream, respectively.
+    /// </summary>
     private double[] Cg = new double[6];
     private double[] Bg = new double[6];
     private double[] Ig = new double[6];
-    // The arrays {\tt Cg}, {\tt Bg}, and {\tt Ig} contain the current state, 
-    // the starting point of the current substream,
-    // and the starting point of the stream, respectively.
 
+    /// <summary>
+    /// This stream generates antithetic variates if 
+    /// and only if {\tt anti = true}.
+    /// </summary>
     private bool anti;
-    // This stream generates antithetic variates if 
-    // and only if {\tt anti = true}.
-
+    
+    /// <summary>
+    /// The precision of the output numbers is ``increased'' (see
+    /// {\tt increasedPrecis}) if and only if {\tt prec53 = true}.
+    /// </summary>
     private bool prec53;
-    // The precision of the output numbers is ``increased'' (see
-    // {\tt increasedPrecis}) if and only if {\tt prec53 = true}.
 
+    /// <summary>
+    ///   Describes the stream (for writing the state, error messages, etc.).
+    /// </summary> 
     private string descriptor;
-    // Describes the stream (for writing the state, error messages, etc.).
 
     // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     // Private methods
 
-    //--------------------------------------------------------------
-    /* Compute (a*s + c) MOD m ; m must be < 2^35 */
-    /* Works also for s, c < 0.                   */
+    /// <summary>
+    /// Compute (a*s + c) MOD m ; m must be < 2^35
+    /// Works also for s, c < 0.                  
+    /// </summary>
     private static double multModM 
-	(double a, double s, double c, double m) {
+	(double a, double s, double c, double m)
+    {
         double v;
         int a1;
         v = a * s + c;
-        if (v >= two53 || v <= -two53 ) {
+        if (v >= two53 || v <= -two53 )
+	{
 	    a1 = (int)(a / two17);  a -= a1 * two17;
 	    v  = a1 * s;
 	    a1 = (int)(v / m);    v -= a1 * m;
@@ -158,14 +171,17 @@ public class RngStream : Random {
         if ((v -= a1 * m) < 0.0) return v += m; else return v;
     }
 
-    //-----------------------------------------------------------
-    /* Returns v = A*s MOD m.  Assumes that -m < s[i] < m. */
-    /* Works even if v = s.                                */
+    /// <summary>
+    ///   Returns v = A*s MOD m.  Assumes that -m < s[i] < m.
+    ///   Works even if v = s.
+    /// </summary>
     private static void matVecModM (double[,] A, double[] s, 
-                                    double[] v, double m) {
+                                    double[] v, double m)
+    {
 	int i;
 	double[] x = new double[3];
-	for (i = 0; i < 3;  ++i) {
+	for (i = 0; i < 3;  ++i)
+	{
 	    x[i] = multModM (A[i,0], s[0], 0.0, m);
 	    x[i] = multModM (A[i,1], s[1], x[i], m);
 	    x[i] = multModM (A[i,2], s[2], x[i], m);
@@ -173,15 +189,18 @@ public class RngStream : Random {
 	for (i = 0; i < 3;  ++i)  v[i] = x[i];
     }
 
-    //------------------------------------------------------------
-    /* Returns C = A*B MOD m */
-    /* Note: work even if A = C or B = C or A = B = C.         */
+    /// <summary>
+    /// Returns C = A*B MOD m
+    /// Note: work even if A = C or B = C or A = B = C.
+    /// </summary>
     private static void matMatModM (double[,] A, double[,] B, 
-                                    double[,] C, double m){
+                                    double[,] C, double m)
+    {
 	int i, j;
 	double[] V = new double[3];
 	double[,] W = new double[3,3];
-	for (i = 0; i < 3;  ++i) {
+	for (i = 0; i < 3;  ++i)
+	{
 	    for (j = 0; j < 3;  ++j)  V[j] = B[j,i];
 	    matVecModM (A, V, V, m);
 	    for (j = 0; j < 3;  ++j)  W[j,i] = V[j];
@@ -192,14 +211,18 @@ public class RngStream : Random {
 	}
     }
 
-    //-------------------------------------------------------------
-    /* Compute matrix B = (A^(2^e) Mod m);  works even if A = B */
+    /// <summary>
+    ///   Compute matrix B = (A^(2^e) Mod m);  works even if A = B
+    /// </summary> 
     private static void matTwoPowModM (double[,] A, double[,] B, 
-                                       double m, int e) {
+                                       double m, int e)
+    {
 	int i, j;
 	/* initialize: B = A */
-	if (A != B) {
-	    for (i = 0; i < 3; i++) {
+	if (A != B)
+	{
+	    for (i = 0; i < 3; i++)
+	    {
 		for (j = 0; j < 3;  ++j)  B[i,j] = A[i,j];
 	    }
 	}
@@ -207,17 +230,21 @@ public class RngStream : Random {
 	for (i = 0; i < e; i++) matMatModM (B, B, B, m);
     }
 
-    //-------------------------------------------------------------
-    /* Compute matrix D = A^c Mod m ;  works even if A = B */
+    /// <summary>
+    ///   Compute matrix D = A^c Mod m ;  works even if A = B
+    /// </summary> 
     private static void matPowModM (double[,] A, double[,] B, 
-                                    double m, int c){
+                                    double m, int c)
+    {
 	int i, j;
 	int n = c;
 	double[,] W = new double[3,3];
 
 	/* initialize: W = A; B = I */
-	for (i = 0; i < 3; i++) {
-	    for (j = 0; j < 3;  ++j)  {
+	for (i = 0; i < 3; i++)
+	{
+	    for (j = 0; j < 3;  ++j)
+	    {
 		W[i,j] = A[i,j];
 		B[i,j] = 0.0;
 	    }
@@ -225,16 +252,19 @@ public class RngStream : Random {
 	for (j = 0; j < 3;  ++j)   B[j,j] = 1.0;
 
 	/* Compute B = A^c mod m using the binary decomp. of c */
-	while (n > 0) {
+	while (n > 0)
+	{
 	    if ((n % 2)==1) matMatModM (W, B, B, m);
 	    matMatModM (W, W, W, m);
 	    n /= 2;
 	}
     } 
 
-    //-------------------------------------------------------------
-    // Generate a uniform random number, with 32 bits of resolution.
-    private double U01 () {
+    /// <summary>
+    ///   Generate a uniform random number, with 32 bits of resolution.
+    /// </summary>
+    private double U01 ()
+    {
         int k;
         double p1, p2, u;
         /* Component 1 */
@@ -254,21 +284,28 @@ public class RngStream : Random {
         return (anti) ? (1 - u) : u;
     }
 
-    //-------------------------------------------------------------
-    // Generate a uniform random number, with 52 bits of resolution.
+    /// <summary>
+    ///   Generate a uniform random number, with 52 bits of resolution.
+    /// </summary> 
     private double U01d ()
     {
         double u = U01();
-        if (anti) {
+        if (anti)
+	{
             // Antithetic case: note that U01 already returns 1-u.
             u += (U01() - 1.0) * invtwo24;
             return (u < 0.0) ? u + 1.0 : u;
-        } else {
+        } else
+	{
             u += U01() * invtwo24;
             return (u < 1.0) ? u : (u - 1.0);
         }
     }
- 
+
+    /// <summary>
+    ///   Default constructor. This uses the package seed for the stream's seeds and
+    ///   then advances the package seed.
+    /// </summary>
     public RngStream ()
     {
 	descriptor = "";
@@ -279,7 +316,9 @@ public class RngStream : Random {
 	GenAdvance (0, 1, A1p127, A2p127, InvA1p127, InvA2p127, nextSeed, nextSeed);
     } 
 
-
+    /// <summary>
+    ///   Constructor which also specifies the stream name
+    /// </summary>
     public RngStream (string name) : this()
     {
 	descriptor = name;
@@ -303,21 +342,36 @@ public class RngStream : Random {
 	GenAdvance (0, 1, A1p127, A2p127, InvA1p127, InvA2p127, nextSeed, nextSeed);
     }
 
+    /// <summary>
+    ///   Set the package seed
+    /// </summary>
     public static void SetPackageSeed (uint[] seed)
     {
         CheckSeed(seed);
 	for (int i = 0; i < 6;  ++i)  nextSeed[i] = seed[i];
     } 
 
-    public void ResetStartStream ()  {
+    /// <summary>
+    ///   Reset the seeds to the start of the stream
+    /// </summary>
+    public void ResetStartStream ()
+    {
 	for (int i = 0; i < 6;  ++i)  Cg[i] = Bg[i] = Ig[i];
     }  
 
-    public void ResetStartSubstream ()  {
+    /// <summary>
+    ///   Reset the current seed to the start of the sub-stream
+    /// </summary>
+    public void ResetStartSubstream ()
+    {
 	for (int i = 0; i < 6;  ++i)  Cg[i] = Bg[i];
     }  
 
-    public void ResetNextSubstream ()  {
+    /// <summary>
+    ///   Reset the current seed to the start of the sub-stream
+    /// </summary>
+    public void ResetNextSubstream ()
+    {
 	int i;
 	matVecModM (A1p76, Bg, Bg, m1);
 	double[] temp = new double[3];
@@ -327,8 +381,11 @@ public class RngStream : Random {
 	for (i = 0; i < 6;  ++i) Cg[i] = Bg[i];
     }  
 
-    // new method
-    public void ResetNextStream ()  {
+    /// <summary>
+    ///   Reset the seeds to the next stream
+    /// </summary> 
+    public void ResetNextStream ()
+    {
 	int i;
 	matVecModM (A1p127, Ig, Ig, m1);
 	double[] temp = new double[3];
@@ -339,69 +396,99 @@ public class RngStream : Random {
 	for (i = 0; i < 6;  ++i) Bg[i] = Ig[i];
     }  
     
-    public void SetAntithetic (bool a)  {
+    /// <summary>
+    ///   Set the anti variable for antithetic sampling.
+    /// </summary> 
+    public void SetAntithetic (bool a)
+    {
 	anti = a;
     } 
 
-    public void IncreasedPrecis (bool incp)  {
+    /// <summary>
+    ///   Set the pec53 variable for increased precision.
+    /// </summary> 
+    public void IncreasedPrecis (bool incp)
+    {
 	prec53 = incp;
     } 
 
-    //-------------------------------------------------------------------------
-    // if e > 0, let n = 2^e + c;
-    // if e < 0, let n = -2^(-e) + c;
-    // if e = 0, let n = c.
-    // Jump n steps forward if n > 0, backwards if n < 0.
-    //
-    public void CalcMatrix (int e, int c, double[,] C1, double[,] C2) {
+    /// <summary>
+    /// Calculate the matrices for the an artitrary number of jumps from single jump
+    /// transition matrices.
+    /// if e > 0, let n = 2^e + c;
+    /// if e < 0, let n = -2^(-e) + c;
+    /// if e = 0, let n = c.
+    /// Jump n steps forward if n > 0, backwards if n < 0.
+    /// </summary>
+    public void CalcMatrix (int e, int c, double[,] C1, double[,] C2)
+    {
 	double[,] B1 = new double[3,3], B2 = new double[3,3];
-	if (e > 0) {
+	if (e > 0)
+	{
 	    matTwoPowModM (A1p0, B1, m1, e);
 	    matTwoPowModM (A2p0, B2, m2, e);
 	}
-	else if (e < 0) {
+	else if (e < 0)
+	{
 	    matTwoPowModM (InvA1p0, B1, m1, -e);
 	    matTwoPowModM (InvA2p0, B2, m2, -e);
 	}
-	if (c >= 0) {
+	if (c >= 0)
+	{
 	    matPowModM (A1p0, C1, m1, c);
 	    matPowModM (A2p0, C2, m2, c);
 	}
-	else {
+	else
+	{
 	    matPowModM (InvA1p0, C1, m1, -c);
 	    matPowModM (InvA2p0, C2, m2, -c);
 	}
-	if (e != 0) {
+	if (e != 0)
+	{
 	    matMatModM (B1, C1, C1, m1);
 	    matMatModM (B2, C2, C2, m2);
 	}
     }
 
+    /// <summary>
+    /// Update an output seed based on an artitrary number of jumps from specified
+    /// transition matrices.
+    /// if e > 0, let n = 2^e + c;
+    /// if e < 0, let n = -2^(-e) + c;
+    /// if e = 0, let n = c.
+    /// Jump n steps forward if n > 0, backwards if n < 0.
+    /// </summary>
     public void GenAdvance (int e, int c,
 			    double[,] A1, double[,] A2,
 			    double[,] InvA1, double[,] InvA2,
-			    double[] CgIn, double[] CgOut) {
+			    double[] CgIn, double[] CgOut)
+    {
 	double[,]
 	    B1 = new double[3,3], B2 = new double[3,3],
 	    C1 = new double[3,3], C2 = new double[3,3];
 	for (int i = 0; i < 6; ++i)  CgOut[i] = CgIn[i];
-	if (e > 0) {
+	if (e > 0)
+	{
 	    matTwoPowModM (A1, B1, m1, e);
 	    matTwoPowModM (A2, B2, m2, e);
 	}
-	else if (e < 0) {
+	else if (e < 0)
+	{
 	    matTwoPowModM (InvA1, B1, m1, -e);
 	    matTwoPowModM (InvA2, B2, m2, -e);
 	}
-	if (c >= 0) {
+	if (c >= 0)
+	{
 	    matPowModM (A1, C1, m1, c);
 	    matPowModM (A2, C2, m2, c);
 	}
-	else {
+	else
+	{
 	    matPowModM (InvA1, C1, m1, -c);
 	    matPowModM (InvA2, C2, m2, -c);
 	}
-	if (e != 0) {
+	if (e != 0)
+	{
 	    matMatModM (B1, C1, C1, m1);
 	    matMatModM (B2, C2, C2, m2);
 	}
@@ -412,37 +499,58 @@ public class RngStream : Random {
 	for (int i = 0; i < 3; ++i)  CgOut[i+3] = cg3[i];
     }
 
-    // advance relative to Cg (current state)
+    /// <summary>
+    ///   Advance the current seed using GenAdvance().
+    /// </summary> 
     public void GenAdvanceState (int e, int c,
 				 double[,] A1, double[,] A2,
-				 double[,] InvA1, double[,] InvA2) {
+				 double[,] InvA1, double[,] InvA2)
+    {
 	GenAdvance(e, c, A1, A2, InvA1, InvA2, Cg, Cg);
     }
 
-    public void AdvanceState (int e, int c)  {
+    /// <summary>
+    ///   Advance the current seed using single step transition matrices.
+    /// </summary>
+    public void AdvanceState (int e, int c)
+    {
 	GenAdvanceState(e, c, A1p0, A2p0, InvA1p0, InvA2p0);
     } 
 
-    public void AdvanceSubstream (int e, int c) {
+    /// <summary>
+    ///   Advacne the current seed using sub-stream steps
+    /// </summary>
+    public void AdvanceSubstream (int e, int c)
+    {
 	GenAdvanceState(e, c, A1p76, A2p76, InvA1p76, InvA2p76);
 	for (int i = 0; i < 6; ++i)
 	    Bg[i] = Cg[i];
     }
 
-    public void AdvanceStream (int e, int c) {
+    /// <summary>
+    ///   Advance the current seed using stream steps.
+    /// </summary>
+    public void AdvanceStream (int e, int c)
+    {
 	GenAdvanceState(e, c, A1p127, A2p127, InvA1p127, InvA2p127);
 	for (int i = 0; i < 6; ++i)
 	    Ig[i] = Bg[i] = Cg[i];
     }
 
-    private static void CheckSeed (uint[] seed) {
+    /// <summary>
+    ///   Check a seed value.
+    /// </summary>
+    private static void CheckSeed (uint[] seed)
+    {
 	/* Check that the seeds are legitimate values */
 	int i;
-	for (i = 0; i < 3; ++i) {
+	for (i = 0; i < 3; ++i)
+	{
 	    if (seed[i] >= m1 || seed[i] < 0)
 		throw new ArgumentException("Seed[" + i + "] not valid");
 	}
-	for (i = 3; i < 6; ++i) {
+	for (i = 3; i < 6; ++i)
+	{
 	    if (seed[i] >= m2 || seed[i] < 0)
 		throw new ArgumentException("Seed[" + i + "] not valid");
 	}
@@ -452,17 +560,27 @@ public class RngStream : Random {
 	    throw new ArgumentException("Last 3 seeds = 0.");
     }
 
-    public void SetSeed (uint[] seed)  {
+    /// <summary>
+    ///   Set all of the seeds.
+    /// </summary>
+    public void SetSeed (uint[] seed)
+    {
         CheckSeed (seed);
         for (int i = 0; i < 6;  ++i)
 	    Cg[i] = Bg[i] = Ig[i] = seed[i];
     } 
 
+    /// <summary>
+    ///   Return the current state.
+    /// </summary>
     public double[] GetState()
     {
 	return Cg;
     } 
 
+    /// <summary>
+    ///   Write a brief description to the console.
+    /// </summary>
     public void WriteState ()
     {
 	Console.Write ("The current state of the RngStream");
@@ -474,6 +592,9 @@ public class RngStream : Random {
 	Console.WriteLine ((uint) Cg[5] + " }\n");
     }  
 
+    /// <summary>
+    ///   Write a full description to the console.
+    /// </summary>
     public void WriteStateFull ()
     {
 	Console.Write ("The RngStream");
@@ -481,33 +602,40 @@ public class RngStream : Random {
 	    Console.Write (" " + descriptor);
 	Console.WriteLine (":\n   anti = " + (anti ? "true" : "false"));
 	Console.WriteLine ("   prec53 = " + (prec53 ? "true" : "false"));
-
 	Console.Write ("   Ig = { ");
 	for (int i = 0; i < 5; i++)
 	    Console.Write ((uint) Ig[i] + ", ");
 	Console.WriteLine ((uint) Ig[5] + " }");
-
 	Console.Write ("   Bg = { ");
 	for (int i = 0; i < 5; i++)
 	    Console.Write ((uint) Bg[i] + ", ");
 	Console.WriteLine ((uint) Bg[5] + " }");
-
 	Console.Write ("   Cg = { ");
 	for (int i = 0; i < 5; i++)
 	    Console.Write ((uint) Cg[i] + ", ");
 	Console.WriteLine ((uint) Cg[5] + " }\n");
     } 
 
-    protected override double Sample ()  {
+    /// <summary>
+    ///   Override the Sample method.
+    /// </summary>
+    protected override double Sample ()
+    {
 	if (prec53) return U01d();
 	else return U01();
     } 
 
+    /// <summary>
+    ///   Override the Next() method
+    /// </summary>
     public override int Next()
     {
 	return (int)(Sample() / norm);
     }
 
+    /// <summary>
+    ///   Override the Next(int,int) method
+    /// </summary>
     public override int Next(int min, int max)
     {
 	if (min > max)
@@ -515,6 +643,9 @@ public class RngStream : Random {
 	return min + (int)(Sample() * (max - min + 1));
     }
 
+    /// <summary>
+    ///   Override the NextBytes(byte[]) method
+    /// </summary>
     public override void NextBytes(byte[] buffer)
     {
 	for (int i = 0, length = buffer.Length; i < length; i++)
