@@ -27,22 +27,22 @@ The current state of the RngStream g1:
 
    sum of 35 integers in [1, 10] = 186
 
-randU01 (g1) = 0.0794167361498534
+NextDouble (g1) = 0.0794167361498534
 
-State of g1 after reset, increasedPrecis (true) and 17 calls to randInt (1, 10):
+State of g1 after reset, increasedPrecis (true) and 17 calls to Next (1, 10):
 The current state of the RngStream g1:
    Cg = { 2633078466, 1040577685, 3747037609, 3152585150, 1712706441, 627445683 }
 
-State of g1 after increasedPrecis (false) and 1 call to randInt
+State of g1 after increasedPrecis (false) and 1 call to Next
 The current state of the RngStream g1:
    Cg = { 1040577685, 3747037609, 277208355, 1712706441, 627445683, 2408037141 }
 
 
-State of g1 after reset, IncreasedPrecis (true) and 17 calls to RandU01:
+State of g1 after reset, IncreasedPrecis (true) and 17 calls to NextDouble:
 The current state of the RngStream g1:
    Cg = { 2633078466, 1040577685, 3747037609, 3152585150, 1712706441, 627445683 }
 
-State of g1 after IncreasedPrecis (false) and 1 call to RandU01
+State of g1 after IncreasedPrecis (false) and 1 call to NextDouble
 The current state of the RngStream g1:
    Cg = { 1040577685, 3747037609, 277208355, 1712706441, 627445683, 2408037141 }
 

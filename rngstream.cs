@@ -35,21 +35,21 @@
 
 using System;
 
-public class RngStream { 
+public class RngStream : Random {
 
     // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     // Private constants.
 
-    private static double norm   = 2.328306549295727688e-10;
-    private static double m1     = 4294967087.0;
-    private static double m2     = 4294944443.0;
-    private static double a12    =  1403580.0;
-    private static double a13n   =   810728.0;
-    private static double a21    =   527612.0;
-    private static double a23n   =   1370589.0;
-    private static double two17    =  131072.0;
-    private static double two53    =  9007199254740992.0;
-    private static double invtwo24 = 5.9604644775390625e-8;
+    private const double norm   = 2.328306549295727688e-10;
+    private const double m1     = 4294967087.0;
+    private const double m2     = 4294944443.0;
+    private const double a12    =  1403580.0;
+    private const double a13n   =   810728.0;
+    private const double a21    =   527612.0;
+    private const double a23n   =   1370589.0;
+    private const double two17    =  131072.0;
+    private const double two53    =  9007199254740992.0;
+    private const double invtwo24 = 5.9604644775390625e-8;
 
     private static double[,] InvA1p0 = {   // Inverse of A1p0
 	{ 184888585.0, 0.0, 1945170933.0 },
@@ -256,7 +256,8 @@ public class RngStream {
 
     //-------------------------------------------------------------
     // Generate a uniform random number, with 52 bits of resolution.
-    private double U01d () {
+    private double U01d ()
+    {
         double u = U01();
         if (anti) {
             // Antithetic case: note that U01 already returns 1-u.
@@ -268,47 +269,55 @@ public class RngStream {
         }
     }
  
-    private void initialise ()  {
+    public RngStream ()
+    {
 	descriptor = "";
 	anti = false;
 	prec53 = false;
 	for (int i = 0; i < 6; ++i)  
 	    Bg[i] = Cg[i] = Ig[i] = nextSeed[i];
-	matVecModM (A1p127, nextSeed, nextSeed, m1);
-	double[] temp = new double[3];
-	for (int i = 0; i < 3; ++i)  
-	    temp[i] = nextSeed[i + 3];
-	matVecModM (A2p127, temp, temp, m2);
-	for (int i = 0; i < 3; ++i)  
-	    nextSeed[i + 3] = temp[i];
+	GenAdvance (0, 1, A1p127, A2p127, InvA1p127, InvA2p127, nextSeed, nextSeed);
     } 
 
 
-    public RngStream () {
-	initialise();
-    }
-
-    public RngStream (string name)  {
-	initialise();
+    public RngStream (string name) : this()
+    {
 	descriptor = name;
     } 
 
-    public static bool setPackageSeed (uint[] seed)  {
-        if (CheckSeed (seed) != 0)
-            return false;                   // FAILURE     
+    /// <summary>
+    /// Initialise the seed as per R's set.seed() with RNGkind("L'Ecuyer-CMRG")
+    /// </summary>
+    public RngStream (Int32 inseed) : this()
+    {
+	if (inseed < 0)
+	    throw new ArgumentException("seed must be greater than or equal to 0");
+	uint seed = (uint) inseed;
+	for(int j = 0; j < 50; j++)
+	    seed = (69069 * seed + 1);
+	for (int i = 0; i < 6;  ++i) {
+	    seed = 69069*seed+1;
+	    while (seed >= m2) seed = 69069*seed+1;
+	    nextSeed[i] = Cg[i] = Bg[i] = Ig[i] = (double) seed;
+	}
+	GenAdvance (0, 1, A1p127, A2p127, InvA1p127, InvA2p127, nextSeed, nextSeed);
+    }
+
+    public static void SetPackageSeed (uint[] seed)
+    {
+        CheckSeed(seed);
 	for (int i = 0; i < 6;  ++i)  nextSeed[i] = seed[i];
-	return true;                     // SUCCESS
     } 
 
-    public void resetStartStream ()  {
+    public void ResetStartStream ()  {
 	for (int i = 0; i < 6;  ++i)  Cg[i] = Bg[i] = Ig[i];
     }  
 
-    public void resetStartSubstream ()  {
+    public void ResetStartSubstream ()  {
 	for (int i = 0; i < 6;  ++i)  Cg[i] = Bg[i];
     }  
 
-    public void resetNextSubstream ()  {
+    public void ResetNextSubstream ()  {
 	int i;
 	matVecModM (A1p76, Bg, Bg, m1);
 	double[] temp = new double[3];
@@ -319,7 +328,7 @@ public class RngStream {
     }  
 
     // new method
-    public void resetNextStream ()  {
+    public void ResetNextStream ()  {
 	int i;
 	matVecModM (A1p127, Ig, Ig, m1);
 	double[] temp = new double[3];
@@ -330,11 +339,11 @@ public class RngStream {
 	for (i = 0; i < 6;  ++i) Bg[i] = Ig[i];
     }  
     
-    public void setAntithetic (bool a)  {
+    public void SetAntithetic (bool a)  {
 	anti = a;
     } 
 
-    public void increasedPrecis (bool incp)  {
+    public void IncreasedPrecis (bool incp)  {
 	prec53 = incp;
     } 
 
@@ -344,7 +353,7 @@ public class RngStream {
     // if e = 0, let n = c.
     // Jump n steps forward if n > 0, backwards if n < 0.
     //
-    public void calcMatrix (int e, int c, double[,] C1, double[,] C2) {
+    public void CalcMatrix (int e, int c, double[,] C1, double[,] C2) {
 	double[,] B1 = new double[3,3], B2 = new double[3,3];
 	if (e > 0) {
 	    matTwoPowModM (A1p0, B1, m1, e);
@@ -368,13 +377,14 @@ public class RngStream {
 	}
     }
 
-    // advance relative to Cg (current state)
-    public void genAdvanceState (int e, int c,
-				 double[,] A1, double[,] A2,
-				 double[,] InvA1, double[,] InvA2) {
+    public void GenAdvance (int e, int c,
+			    double[,] A1, double[,] A2,
+			    double[,] InvA1, double[,] InvA2,
+			    double[] CgIn, double[] CgOut) {
 	double[,]
 	    B1 = new double[3,3], B2 = new double[3,3],
 	    C1 = new double[3,3], C2 = new double[3,3];
+	for (int i = 0; i < 6; ++i)  CgOut[i] = CgIn[i];
 	if (e > 0) {
 	    matTwoPowModM (A1, B1, m1, e);
 	    matTwoPowModM (A2, B2, m2, e);
@@ -395,79 +405,66 @@ public class RngStream {
 	    matMatModM (B1, C1, C1, m1);
 	    matMatModM (B2, C2, C2, m2);
 	}
-	calcMatrix(e, c, C1, C2);
-	matVecModM (C1, Cg, Cg, m1);
+	matVecModM (C1, CgOut, CgOut, m1);
 	double[] cg3 = new double[3];
-	for (int i = 0; i < 3; i++)  cg3[i] = Cg[i+3];
+	for (int i = 0; i < 3; ++i)  cg3[i] = CgOut[i+3];
 	matVecModM (C2, cg3, cg3, m2);
-	for (int i = 0; i < 3; i++)  Cg[i+3] = cg3[i];
+	for (int i = 0; i < 3; ++i)  CgOut[i+3] = cg3[i];
     }
 
-    public void advanceState (int e, int c)  {
-	genAdvanceState(e, c, A1p0, A2p0, InvA1p0, InvA2p0);
+    // advance relative to Cg (current state)
+    public void GenAdvanceState (int e, int c,
+				 double[,] A1, double[,] A2,
+				 double[,] InvA1, double[,] InvA2) {
+	GenAdvance(e, c, A1, A2, InvA1, InvA2, Cg, Cg);
+    }
+
+    public void AdvanceState (int e, int c)  {
+	GenAdvanceState(e, c, A1p0, A2p0, InvA1p0, InvA2p0);
     } 
 
-    public void advanceSubstream (int e, int c) {
-	genAdvanceState(e, c, A1p76, A2p76, InvA1p76, InvA2p76);
+    public void AdvanceSubstream (int e, int c) {
+	GenAdvanceState(e, c, A1p76, A2p76, InvA1p76, InvA2p76);
 	for (int i = 0; i < 6; ++i)
 	    Bg[i] = Cg[i];
     }
 
-    public void advanceStream (int e, int c) {
-	genAdvanceState(e, c, A1p127, A2p127, InvA1p127, InvA2p127);
+    public void AdvanceStream (int e, int c) {
+	GenAdvanceState(e, c, A1p127, A2p127, InvA1p127, InvA2p127);
 	for (int i = 0; i < 6; ++i)
 	    Ig[i] = Bg[i] = Cg[i];
     }
 
-    private static int CheckSeed (uint[] seed) {
-	/* Check that the seeds are legitimate values. Returns 0 if legal seeds,
-	   -1 otherwise. */
+    private static void CheckSeed (uint[] seed) {
+	/* Check that the seeds are legitimate values */
 	int i;
 	for (i = 0; i < 3; ++i) {
-	    if (seed[i] >= m1 || seed[i] < 0) {
-		Console.WriteLine("****************************************\n"
-				  + "ERROR: Seed[" + i + "],   Seed is not set."
-				  + "\n****************************************\n");
-		return -1;
-	    }
+	    if (seed[i] >= m1 || seed[i] < 0)
+		throw new ArgumentException("Seed[" + i + "] not valid");
 	}
 	for (i = 3; i < 6; ++i) {
-	    if (seed[i] >= m2 || seed[i] < 0) {
-		Console.WriteLine("*****************************************\n"
-				  + "ERROR: Seed[" + i + "],   Seed is not set."
-				  + "\n*****************************************\n");
-		return -1;
-	    }
+	    if (seed[i] >= m2 || seed[i] < 0)
+		throw new ArgumentException("Seed[" + i + "] not valid");
 	}
-	if (seed[0] == 0 && seed[1] == 0 && seed[2] == 0) {
-	    Console.WriteLine ("****************************\n"
-			       + "ERROR: First 3 seeds = 0.\n"
-			       +  "****************************\n");
-            return -1;
-	}
-	if (seed[3] == 0 && seed[4] == 0 && seed[5] == 0) {
-	    Console.WriteLine ("****************************\n"
-			       + "ERROR: Last 3 seeds = 0.\n"
-			       + "****************************\n");
-            return -1;
-	}
-	return 0;
+	if (seed[0] == 0 && seed[1] == 0 && seed[2] == 0)
+	    throw new ArgumentException("First 3 seeds = 0.");
+	if (seed[3] == 0 && seed[4] == 0 && seed[5] == 0)
+	    throw new ArgumentException("Last 3 seeds = 0.");
     }
 
-    public bool setSeed (uint[] seed)  {
-        int i;
-        if (CheckSeed (seed) != 0)
-            return false;                   // FAILURE     
-        for (i = 0; i < 6;  ++i)
+    public void SetSeed (uint[] seed)  {
+        CheckSeed (seed);
+        for (int i = 0; i < 6;  ++i)
 	    Cg[i] = Bg[i] = Ig[i] = seed[i];
-	return true;                        // SUCCESS
     } 
 
-    public double[] getState()  {
+    public double[] GetState()
+    {
 	return Cg;
     } 
 
-    public void writeState ()   {
+    public void WriteState ()
+    {
 	Console.Write ("The current state of the RngStream");
 	if (descriptor != null && descriptor != "")
 	    Console.Write (" " + descriptor);
@@ -477,7 +474,8 @@ public class RngStream {
 	Console.WriteLine ((uint) Cg[5] + " }\n");
     }  
 
-    public void writeStateFull ()  {
+    public void WriteStateFull ()
+    {
 	Console.Write ("The RngStream");
 	if (descriptor != null && descriptor != "")
 	    Console.Write (" " + descriptor);
@@ -500,13 +498,27 @@ public class RngStream {
 	Console.WriteLine ((uint) Cg[5] + " }\n");
     } 
 
-    public double randU01 ()  {
-	if (prec53) return this.U01d();
-	else return this.U01();
+    protected override double Sample ()  {
+	if (prec53) return U01d();
+	else return U01();
     } 
 
-    public int randInt (int i, int j)  {
-	return (i + (int)(randU01() * (j - i + 1.0)));
-    } 
+    public override int Next()
+    {
+	return (int)(Sample() / norm);
+    }
+
+    public override int Next(int min, int max)
+    {
+	if (min > max)
+	    throw new ArgumentException("min must be less than or equal to max");
+	return min + (int)(Sample() * (max - min + 1));
+    }
+
+    public override void NextBytes(byte[] buffer)
+    {
+	for (int i = 0, length = buffer.Length; i < length; i++)
+	    buffer[i] = (byte)Next();
+    }
     
 }
