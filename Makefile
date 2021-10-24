@@ -1,20 +1,21 @@
 CSC = mcs
 MONO = mono
 
-test2: test2RngStream.exe test2RngStream.res
+test2: test2RngStream.cs rngstream.cs test2RngStream.res
+	$(CSC) test2RngStream.cs rngstream.cs
 	$(MONO) test2RngStream.exe | tee test.res
-	@echo Check whether there are any differences from the reference test output:
+	@echo
+	@echo Compare with the reference test output:
 	diff -u test2RngStream.res test.res
-	rm test.res # tidy up
+	@rm test.res # tidy up
 
-test: testRngStream.exe
+test: testRngStream.cs rngstream.cs
+	$(CSC) testRngStream.cs rngstream.cs
 	$(MONO) testRngStream.exe
 
-test2RngStream.exe: test2RngStream.cs rngstream.cs
-	$(CSC) test2RngStream.cs rngstream.cs
-
-testRngStream.exe: testRngStream.cs rngstream.cs
-	$(CSC) testRngStream.cs rngstream.cs
+test3: test3RngStream.cs rngstream.cs
+	$(CSC) test3RngStream.cs rngstream.cs
+	$(MONO) test3RngStream.exe
 
 test2dotnet:
 	dotnet clean
@@ -28,6 +29,7 @@ testdotnet:
 
 clean:
 	rm -f test.res
-	rm -f test2RngStream.exe
 	rm -f testRngStream.exe
+	rm -f test2RngStream.exe
+	rm -f test3RngStream.exe
 
