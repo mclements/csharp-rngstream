@@ -3,16 +3,10 @@
  * Title:          RngStream.cs
  * Description:    Multiple Streams and Substreams of Random Numbers
  * Copyright:      Pierre L'Ecuyer, University of Montreal
- * Notice:         This code can be used freely for personal, academic,
- *                 or non-commercial purposes. For commercial purposes, 
- *                 please contact P. L'Ecuyer at: lecuyer@iro.UMontreal.ca
- * Version         1.2
- * Date:           26 July 2011
+ * Notice:         Apache 2.0 license
+ * Version         1.1 (Java version)
+ * Date:           26 July 2011 (Java version)
 
- * Correction:     added a test 
- descriptor != null
- in methods writeStateFull() and writeState().
- *
  * If you use this software for work leading to publications, 
  * please cite the following relevant articles in which MRG32k3a 
  * and the package with multiple streams were proposed:
@@ -25,12 +19,8 @@
  * Operations Research, 50, 6 (2002), 1073--1075
  *
 
- Adapted for C# by Mark Clements 2021-10-14
- - Extended to include calcMatrix, genAdvance, advanceStream, advanceSubstream
- - Renamed InvA? to InvA?p0
- - Included InvA?p76 and InvA?p127
- - seeds are passed in as uint[] (cf long[] in Java) - but handled internally as double[]
- - Inherits from System.Random
+ Adapted for C# by Mark Clements
+ Date: 2021-10-25
 */
 
 using System;
