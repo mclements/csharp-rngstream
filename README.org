@@ -1,10 +1,10 @@
 #+title: Rngstream random number generators for C#
 #+author: Mark Clements
-#+options: toc:nil html-postamble:nil
+#+options: toc:nil html-postamble:nil ':t
 
 * Introduction
 
-** RngStreams
+** RngStream
 
 RngStreams is an object-oriented random-number package with many long streams and substreams,
 based on the MRG32k3a RNG from reference [fn:1] below and proposed in [fn:2].
@@ -22,6 +22,30 @@ http://www.iro.umontreal.ca/~lecuyer/
 
 If you use it for your research, please cite the relevant publications in which MRG32k3a
 and the package with multiple streams were proposed.
+
+** C# implementation
+
+This code is adapted from the Java implementation. The implementation:
+ - Inherits from [[https://docs.microsoft.com/en-us/dotnet/api/system.random?view=net-5.0][System.Random]]
+ - Constructors:
+  - =RngStream()= :: initially use the seed ={12345u,12345u,12345u,12345u,12345u,12345u}= and then subsequently advances to the next stream
+  - =RngStream(string name)= :: to set the stream name
+  - =RngStream(int seed)= :: with equivalent seed behaviour as R's =set.seed(seed)=.
+ - Standard =RngStream= methods:
+  - =void SetPackageSeed(uint[])= :: to set the package seed
+  - =void ResetStartStream()= :: to reset to the start of the stream
+  - =void ResetNextSubstream()= :: to reset to the start of the sub-stream
+  - =void SetAntithetic(bool)= :: to determine whether to use antithetic sampling (default=false)
+  - =void IncreasedPrecis(bool)= :: to determine whether to use increased precision (default=false)
+  - =void SetSeed(uint[])= :: set the stream seeds (note: does not change the package seed)
+  - =double[] GetState()= :: returns the current seed
+  - =void WriteState()= :: write a brief description to the console
+  - =void WriteStateFull()= :: write a full description to the console
+ - New methods
+  - =void AdvanceState(int e,int c)= :: increment the current seed by \(2^e+c\)
+  - =void AdvanceSubstream(int e,int c)= :: increment the substream seed by \(2^e+c\) using substream steps and change the current seed to the same value
+  - =void AdvanceStream(int e,int c)= :: increment the current stream by  \(2^e+c\) using stream steps and change the current seed and substream to the same value
+
 
 * Example
 
@@ -113,39 +137,50 @@ parameters may be used, like mcs -warnaserror+"
 ;;; ob-csharp.el ends here
 #+END_SRC
 
+Using C# and the =RngStream.cs= file:
+
 #+BEGIN_SRC csharp :results verbatim :otherfiles RngStream.cs :exports both
   using System;
   class HelloWorld {
       public static void Main()
       {
-	  RngStream rng = new RngStream(12345);
-	  Console.WriteLine(rng.NextDouble()+" "+rng.NextDouble());
-	  rng.ResetNextSubstream();
-	  Console.WriteLine(rng.NextDouble()+" "+rng.NextDouble());
-	  rng.ResetNextStream();
-	  Console.WriteLine(rng.NextDouble()+" "+rng.NextDouble());
+	  RngStream rng1 = new RngStream(); // defaults to {12345u,12345u,12345u,12345u,12345u,12345u}
+	  Console.WriteLine(rng1.NextDouble()+" "+rng1.NextDouble());
+	  RngStream rng2 = new RngStream(12345);
+	  Console.WriteLine(rng2.NextDouble()+" "+rng2.NextDouble());
+	  rng2.ResetNextSubstream();
+	  Console.WriteLine(rng2.NextDouble()+" "+rng2.NextDouble());
+	  rng2.ResetNextStream();
+	  Console.WriteLine(rng2.NextDouble()+" "+rng2.NextDouble());
       }
   }
 #+END_SRC
 
 #+RESULTS:
+: 0.127011122046577 0.318527565396794
 : 0.0724408950348632 0.769887841571279
 : 0.698103786494021 0.186421477183622
 : 0.485965335294788 0.15088750221408
 
+Equivalent code in R:
+
 #+BEGIN_SRC R :results output :exports both
   library(parallel)
   RNGkind("L'Ecuyer-CMRG")
+  ## Note that 407 is the index for this type of random number generator
+  .Random.seed <- c(407L,12345L,12345L,12345L,12345L,12345L,12345L)
+  print(runif(2))
   set.seed(12345)
   Ig <- Bg <- .Random.seed
   print(runif(2))
-  .Random.seed <- Bg <- nextRNGSubStream(Bg)
+  .Random.seed <- Bg <- parallel::nextRNGSubStream(Bg)
   print(runif(2))
-  .Random.seed <- Ig <- Bg <- nextRNGStream(Ig)
+  .Random.seed <- Ig <- Bg <- parallel::nextRNGStream(Ig)
   print(runif(2))
 #+END_SRC
 
 #+RESULTS:
+: [1] 0.1270111 0.3185276
 : [1] 0.0724409 0.7698878
 : [1] 0.6981038 0.1864215
 : [1] 0.4859653 0.1508875
