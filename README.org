@@ -1,5 +1,29 @@
 #+title: Rngstream random number generators for C#
 #+author: Mark Clements
+#+options: toc:nil html-postamble:nil
+
+* Introduction
+
+** RngStreams
+
+RngStreams is an object-oriented random-number package with many long streams and substreams,
+based on the MRG32k3a RNG from reference [fn:1] below and proposed in [fn:2].
+
+It has implementations in C, C++, Java, R, and some other languages.
+The main description and documentation is in the c++ directory, in the paper streams.pdf.
+Directories c and java gives a short description of the interfaces in C and Java, respectively.
+
+The package is copyrighted by Pierre L'Écuyer and the University of Montreal.
+It can be used freely for any purpose.
+
+E-mail:   [[mailto:lecuyer@iro.umontreal.ca]]
+
+http://www.iro.umontreal.ca/~lecuyer/
+
+If you use it for your research, please cite the relevant publications in which MRG32k3a
+and the package with multiple streams were proposed.
+
+* Example
 
 #+BEGIN_SRC elisp :exports none
 ;;; ob-csharp.el --- org-babel functions for csharp evaluation
@@ -10,6 +34,9 @@
 ;; Author: thomas "at" friendlyvillagers.com 
 ;; Keywords: literate programming, reproducible research
 ;; Homepage: http://orgmode.org
+
+;; LOCAL CHANGES: default to "mcs"; add :otherfiles argument for compiling
+;; Mark Clements 2021-10-15
 
 ;; This file is NOT YET part of GNU Emacs.
 
@@ -30,9 +57,6 @@
 
 ;; Currently this only supports the external compilation and execution
 ;; of csharp code blocks (i.e., no session support).
-
-;; Local changes: default to "mcs"; add :otherfiles argument for compiling
-;; Mark Clements 2021-10-15
 
 ;;; Code:
 (require 'ob)
@@ -89,54 +113,31 @@ parameters may be used, like mcs -warnaserror+"
 ;;; ob-csharp.el ends here
 #+END_SRC
 
-
-#+BEGIN_SRC csharp :results verbatim :otherfiles rngstream.cs :exports both 
+#+BEGIN_SRC csharp :results verbatim :otherfiles RngStream.cs :exports both
   using System;
   class HelloWorld {
       public static void Main()
       {
-	  RngStream rng = new RngStream();
-	  Console.WriteLine(rng.randU01());
-	  Console.WriteLine(rng.randU01());
-
-	  rng.resetStartStream();
-	  Console.WriteLine(rng.randU01());
-	  Console.WriteLine(rng.randU01());
-
-	  rng.resetStartSubstream();
-	  Console.WriteLine(rng.randU01());
-	  Console.WriteLine(rng.randU01());
-
-	  rng.resetNextSubstream();
-	  Console.WriteLine(rng.randU01());
-	  Console.WriteLine(rng.randU01());
-
-	  rng.resetNextStream();
-	  Console.WriteLine(rng.randU01());
-	  Console.WriteLine(rng.randU01());
+	  RngStream rng = new RngStream(12345);
+	  Console.WriteLine(rng.NextDouble()+" "+rng.NextDouble());
+	  rng.ResetNextSubstream();
+	  Console.WriteLine(rng.NextDouble()+" "+rng.NextDouble());
+	  rng.ResetNextStream();
+	  Console.WriteLine(rng.NextDouble()+" "+rng.NextDouble());
       }
   }
 #+END_SRC
 
 #+RESULTS:
-#+begin_example
-0.127011122046577
-0.318527565396794
-0.127011122046577
-0.318527565396794
-0.127011122046577
-0.318527565396794
-0.0793989897973346
-0.480339504757574
-0.75958186224872
-0.978310573261371
-#+end_example
+: 0.0724408950348632 0.769887841571279
+: 0.698103786494021 0.186421477183622
+: 0.485965335294788 0.15088750221408
 
-#+BEGIN_SRC R :session *R* :results output :exports both
+#+BEGIN_SRC R :results output :exports both
   library(parallel)
-  invisible(runif(1))
   RNGkind("L'Ecuyer-CMRG")
-  .Random.seed <- Ig <- Bg <- c(10407L, 12345L, 12345L, 12345L, 12345L, 12345L, 12345L)
+  set.seed(12345)
+  Ig <- Bg <- .Random.seed
   print(runif(2))
   .Random.seed <- Bg <- nextRNGSubStream(Bg)
   print(runif(2))
@@ -145,6 +146,15 @@ parameters may be used, like mcs -warnaserror+"
 #+END_SRC
 
 #+RESULTS:
-: [1] 0.1270111 0.3185276
-: [1] 0.07939899 0.48033950
-: [1] 0.7595819 0.9783106
+: [1] 0.0724409 0.7698878
+: [1] 0.6981038 0.1864215
+: [1] 0.4859653 0.1508875
+
+
+[fn:1] P. L'Ecuyer, "Good Parameter Sets for Combined Multiple Recursive Random Number Generators",
+Operations Research, 47, 1 (1999), 159--164.
+
+[fn:2] P. L'Ecuyer, R. Simard, E. J. Chen, and W. D. Kelton,
+"An Objected-Oriented Random-Number Package with Many Long Streams and Substreams",
+Operations Research, 50, 6 (2002), 1073--1075
+
